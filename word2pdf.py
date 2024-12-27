@@ -1,7 +1,7 @@
 import os
 import zipfile
 from io import BytesIO
-from PIL import Image
+from PIL import Image, ImageOps
 import customtkinter as ctk
 from tkinter import filedialog, messagebox
 import threading
@@ -45,31 +45,6 @@ def extract_images_from_word(input_path):
             f"Error extracting images from Word document: {str(e)}")
 
     return images
-
-
-def convert_word_to_pdf(input_path, output_path):
-    """
-    Converts an image-based Word document to a PDF using Pillow.
-
-    Args:
-        input_path (str): Path to the input Word (.docx) file.
-        output_path (str): Path to the output PDF file.
-    """
-    try:
-        # Extract images from the Word document
-        images = extract_images_from_word(input_path)
-
-        # If no images are found, raise an error
-        if not images:
-            raise ValueError("No images found in the Word document.")
-
-        # Save the images as a PDF
-        images[0].save(output_path, save_all=True,
-                       append_images=images[1:], resolution=100.0, quality=100)
-    except Exception as e:
-        raise RuntimeError(f"Error converting Word to PDF: {str(e)}")
-
-# CustomTkinter GUI
 
 
 def browse_file():
@@ -116,13 +91,31 @@ def convert_to_pdf():
         if not total_images:
             raise ValueError("No images found in the Word document.")
 
+        first_image_size = images[0].size
+        normalized_images = []
+
+        for img in images:
+            # Resize to match the first image's dimensions
+            # resized_img = img.resize(first_image_size, Image.LANCZOS)
+            resized_img = ImageOps.fit(img, first_image_size, method=Image.LANCZOS)
+            normalized_images.append(resized_img)
+
         # Save the PDF and update progress
-        for idx, img in enumerate(images):
+        for idx, img in enumerate(normalized_images):
             if idx == 0:
-                img.save(output_file, save_all=True, append_images=images[1:], resolution=100.0, quality=100)
+                normalized_images[0].save(
+                    output_file, save_all=True, append_images=normalized_images[1:], resolution=330.0, quality=100
+                )
             progress_bar.set((idx + 1) / total_images)
 
-        messagebox.showinfo("Success", f"Successfully converted to {output_file}")
+        # # Save the PDF and update progress
+        # for idx, img in enumerate(images):
+        #     if idx == 0:
+        #         img.save(output_file, save_all=True, append_images=images[1:], resolution=100.0, quality=100)
+        #     progress_bar.set((idx + 1) / total_images)
+
+        messagebox.showinfo(
+            "Success", f"Successfully converted to {output_file}")
     except Exception as e:
         messagebox.showerror("Conversion Error", f"Error: {str(e)}")
     finally:
